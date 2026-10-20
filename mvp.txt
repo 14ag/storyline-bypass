@@ -1,0 +1,53 @@
+## Extension Specification: Articulate Storyline Animation & Audio Bypass
+
+**Context**
+The target site uses an Articulate Storyline player embedded via an `iframe`. The tutorial flow is gated by audio duration; even when manually skipping audio, UI components (buttons/animations) remain hidden until the original audio duration has elapsed.
+
+**Diagnostics**
+The tutorial engine manages state through a custom internal timeline rather than standard HTML5 media events. Key technical findings include:
+
+| Component | Technical Detail |
+| :--- | :--- |
+| **Framework** | Articulate Storyline (Modern/HTML5 Output) |
+| **Media Container** | `iframe` containing multiple `<audio>` elements (Base64 and `.mp3`) |
+| **State Management** | Global `window.DS` and `window.globals` objects inside the iframe |
+| **Visibility Logic** | Uses a `.hidden` class which applies `display: none` |
+| **Element Classes** | `.slide-object`, `.shown`, `.hidden`, `.slide-object-vectorshape` |
+
+**Actionable Findings**
+* **CSS Override:** The player toggles the `.hidden` class to control the tutorial flow. Forcing these elements to display via CSS will bypass visual gates.
+* **Volume Control:** Audio can be silenced by targeting all `<audio>` and `<video>` elements within the iframe context.
+* **Timeline Logic:** The engine relies on `window.DS` for connection and asset loading. Forcing the `display` property is more reliable than attempting to manipulate the proprietary `DS` timeline object.
+
+**Proposed Extension Spec**
+The following prompt provides the specific context required for an agent to build a targeted Chrome Extension.
+
+---
+
+### Agent Build Prompt
+
+**Goal:** Create a Chrome Extension that mutes audio and forces all hidden tutorial elements to appear immediately on the site `worldclasseduhub.vuca.co.za`.
+
+**Technical Context:**
+1.  **Target Environment:** The content is hosted inside an `iframe`. You must inject the script/styles into all frames.
+2.  **Target Elements:** The tutorial uses Articulate Storyline. Interactive elements and buttons are div elements with the class `.slide-object`.
+3.  **Visibility Mechanism:** Elements are hidden using a class named `.hidden`. When inspected, this class applies `display: none !important`.
+4.  **Audio:** Media is played via standard `<audio>` tags inside the iframe.
+
+**Requirements:**
+1.  **Content Script:**
+    *   Target all `<audio>` and `<video>` elements and set `.muted = true` and `.volume = 0`.
+    *   Monitor the DOM for newly added media elements (as Storyline loads them dynamically) and mute them immediately.
+2.  **CSS Injection:**
+    *   Inject a global style sheet into the iframe document.
+    *   The style must force visibility on all tutorial objects:
+    ```css
+    .slide-object.hidden {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    ```
+3.  **Execution:** Ensure the script runs at `document_start` to catch the initial `window.DS` and `window.globals` configurations.
+
+*Note: The code fixes and findings above were identified on a live page in DevTools. When applying them to your codebase, please adapt them to your project's specific technical stack (e.g., Tailwind CSS classes, CSS modules, framework components) rather than applying them as literal CSS overrides.*
