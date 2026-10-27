@@ -1,14 +1,21 @@
 ![Banner](./assets/banner.webp)
 
-## template repo
 
-- /.vscode/prune-history-to-workspace.ps1
-- /.vscode/dump-review-diff.ps1
+making an extension for a site that skips all the animation delays which are gated behind the audio. normally this training before allowing one to proceed by revealing the "continue" button.
 
+### installation
 
-- /.github/workflows/readme-banner-reset.yml
-- /.github/workflows/readme-banner-update.yml
-- /.github/workflows/release-notes-banner.yml
+1. Extract the [extension files](https://github.com/14ag/storyline-bypass/archive/refs/tags/1.26.76840.zip). You should have a folder with a manifest.json file inside it.
 
+2. Open Chrome and enter this address in the address bar: `chrome://extensions`
 
-- /scripts/version.py
+3. Turn on **Developer mode** using the switch in the top-right corner.
+
+4. Click **Load unpacked**.
+
+5. Select the folder that contains the manifest.json file.
+
+6. Click **Select Folder**.
+
+7. The extension should now appear on the extensions page. It is ready to use.
+
