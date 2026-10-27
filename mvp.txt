@@ -49,5 +49,8 @@ The following prompt provides the specific context required for an agent to buil
     }
     ```
 3.  **Execution:** Ensure the script runs at `document_start` to catch the initial `window.DS` and `window.globals` configurations.
+target website: worldclasseduhub.vuca.co.za
 
-*Note: The code fixes and findings above were identified on a live page in DevTools. When applying them to your codebase, please adapt them to your project's specific technical stack (e.g., Tailwind CSS classes, CSS modules, framework components) rather than applying them as literal CSS overrides.*
+
+
+making an extension for this site that skips all the animation delays which are gated behind the audio. normally this training website make users sit until its done talking then allows them to proceed by revealing the "continue button". it also makes the animations dalay for a while before playing them, as if to sync with the audio. what i want is everything to be static. skip the animations, reveal delay, the audio.... i want it to be like i do not have to wait for anything. i have installed the extension to achieve this and results are not satisfactory yet. your goal is to perform a deep analysis and write a report that will be used to make extension work better. for refrence, check how this page appears when it loads. you will notice that some elements are not there. compare it with its current state when the animations have all played and buttons revealed
