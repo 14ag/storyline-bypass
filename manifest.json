@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Storyline Audio & Animation Bypass",
-  "version": "0.1.0",
+  "name": "Storyline-Bypass",
+  "version": "1.26.76840",
   "description": "Mutes Storyline audio and fast-forwards its slide timeline.",
   "content_scripts": [
     {

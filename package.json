@@ -1,21 +1,21 @@
 {
-  "name": "deloitte-animations",
-  "version": "1.0.0",
-  "description": "![Banner](./assets/banner.webp)",
+  "name": "Storyline-Bypass",
+  "version": "1.26.76840",
+  "description": "Mutes Storyline audio and fast-forwards its slide timeline.",
   "main": "content.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/14ag/deloitte-animations.git"
+    "url": "git+https://github.com/14ag/storyline-bypass.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/14ag/deloitte-animations/issues"
+    "url": "https://github.com/14ag/storyline-bypass/issues"
   },
-  "homepage": "https://github.com/14ag/deloitte-animations#readme"
+  "homepage": "https://github.com/14ag/storyline-bypass#readme"
 }

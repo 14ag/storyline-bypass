@@ -59,3 +59,6 @@ the purpose of this extension is to make the next button always available, not t
 
 use this resoning.. what action is the "next" button waiting for so that it can be activated? my extension should be getting this action, then performing it. it checks the "next" button, "next" button wants bottle/icon/bulb to be clicked.. extension clicks the bottle/icon/bulb then the "next" button is available. 
 while testing, after clicking the button you must remain on the same page. try again. i have navigated to another page you should work on. the only verification should be when the text "click on each icon to learn more" changes to "click on the next button to continue". no other verification. all else is meaningless.note that
+
+
+
