@@ -3,11 +3,20 @@
   "name": "Storyline-Bypass",
   "version": "1.26.76840",
   "description": "Mutes Storyline audio and fast-forwards its slide timeline.",
+  "permissions": ["scripting"],
+  "host_permissions": [
+    "https://worldclasseduhub.vuca.co.za/courses/*",
+    "https://worldclasseduhub.vuca.co.za/wp-content/uploads/uncanny-snc/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Storyline-Bypass"
+  },
   "content_scripts": [
     {
       "matches": [
-        "https://worldclasseduhub.vuca.co.za/*",
-        "http://worldclasseduhub.vuca.co.za/*"
+        "https://worldclasseduhub.vuca.co.za/courses/*",
+        "https://worldclasseduhub.vuca.co.za/wp-content/uploads/uncanny-snc/*"
       ],
       "js": ["content.js"],
       "all_frames": true,

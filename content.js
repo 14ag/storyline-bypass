@@ -1,5 +1,13 @@
 (() => {
+  const SETTING_EVENT = 'storyline-bypass-setting';
+  let enabled = localStorage.getItem('storyline-bypass-enabled') !== 'false';
+
+  window.addEventListener(SETTING_EVENT, (event) => {
+    enabled = event.detail?.enabled !== false;
+  });
+
   const mute = (node) => {
+    if (!enabled) return;
     if (!(node instanceof HTMLMediaElement)) return;
     node.muted = true;
     node.volume = 0;
@@ -50,6 +58,42 @@
   };
 
   const models = (value) => Array.isArray(value) ? value : value?.models || [];
+
+  const visible = (element) => {
+    if (!element) return false;
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' &&
+      rect.width > 0 && rect.height > 0;
+  };
+
+  const closePlayer = () => {
+    if (!enabled) return;
+    try {
+      const root = window.top?.document || document;
+      const close = [...root.querySelectorAll('.gclose, button[aria-label="Close"]')]
+        .find(visible);
+      close?.click();
+    } catch (e) {}
+  };
+
+  const autoPlayVideo = () => {
+    if (!enabled) return;
+    const video = [...document.querySelectorAll('video')].find((item) =>
+      !item.dataset.storylineBypassVideo && (item.readyState > 0 || item.duration > 0)
+    );
+    const play = [...document.querySelectorAll('button')].find((button) =>
+      /^play$/i.test(button.textContent.trim()) && visible(button)
+    );
+    if (!video || !play) return;
+
+    video.dataset.storylineBypassVideo = '1';
+    video.playbackRate = SPEED;
+    video.addEventListener('ended', closePlayer, { once: true });
+    play.click();
+    video.play().catch(() => {});
+    if (video.ended) closePlayer();
+  };
 
   const gatedObjects = (slide) => {
     const layers = models(slide.attributes?.slideLayers);
@@ -116,6 +160,8 @@
   };
 
   const tick = () => {
+    if (!enabled) return;
+    autoPlayVideo();
     const app = window.DS?.appState;
     if (!app) return;
     if (app.getPlaybackSpeed() !== SPEED) app.setPlaybackSpeed(SPEED);

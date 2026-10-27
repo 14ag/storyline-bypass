@@ -1,0 +1,40 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+html,
+body {
+  width: 100px;
+  min-height: 30px;
+  margin: 0;
+}
+
+body {
+  box-sizing: border-box;
+  padding: 8px;
+  background: #1f1f1f;
+  color: #f1f1f1;
+  font-size: 14px;
+}
+
+.setting {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  cursor: pointer;
+  user-select: none;
+}
+
+input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #1c73be;
+}
+
+input:focus-visible {
+  outline: 1px solid #76b9ed;
+  outline-offset: 2px;
+}
