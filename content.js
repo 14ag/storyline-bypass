@@ -67,14 +67,98 @@
       rect.width > 0 && rect.height > 0;
   };
 
+  const objectTargets = (id) => {
+    if (!id) return [];
+    const targets = [
+      ...document.querySelectorAll(`[data-model-id="${CSS.escape(id)}"]`),
+      ...[...document.querySelectorAll('[data-represents]')]
+        .filter((element) => element.dataset.represents.split('.').includes(id))
+    ];
+    return [...new Set(targets)];
+  };
+
+  const playerCloseEntries = () => {
+    const slide = window.DS?.windowManager?.getMainWindowSlide?.();
+    if (!slide) return [];
+    return models(slide.attributes?.slideLayers).flatMap((layer) => {
+      const attributes = layer.attributes || layer;
+      return models(attributes.objects).filter((object) => {
+        const release = (object.attributes?.events || [])
+          .find((event) => event.kind === 'onrelease');
+        return release?.actions?.some((action) => action.kind === 'hide_slidelayer');
+      }).map((object) => ({
+        id: object.id || object.attributes?.id,
+        layerId: layer.id || attributes.id
+      }));
+    });
+  };
+
+  const layerHasVisibleObject = (layerId, closeId) => [...document
+    .querySelectorAll('[data-represents]')]
+    .some((element) => {
+      const ids = element.dataset.represents.split('.');
+      return ids.includes(layerId) && !ids.includes(closeId) && visible(element);
+    });
+
   const closePlayer = () => {
     if (!enabled) return;
     try {
-      const root = window.top?.document || document;
-      const close = [...root.querySelectorAll('.gclose, button[aria-label="Close"]')]
-        .find(visible);
+      const close = playerCloseTargets().find(visible);
       close?.click();
     } catch (e) {}
+  };
+
+  const playerCloseTargets = () => playerCloseEntries()
+    .filter(({ id, layerId }) => layerId && layerHasVisibleObject(layerId, id))
+    .flatMap(({ id }) => [
+      ...[...document.querySelectorAll('button[data-represents]')]
+        .filter((button) => button.dataset.represents.split('.').includes(id)),
+      ...objectTargets(id)
+    ]).reduce((targets, target) => {
+    if (!targets.includes(target)) targets.push(target);
+    const button = target.matches('button')
+      ? target
+      : target.querySelector('button, [data-accepts="events"]');
+    if (button && !targets.includes(button)) targets.push(button);
+      return targets;
+    }, []);
+
+  const enablePlayerClose = () => {
+    for (const target of playerCloseTargets()) {
+      target.style.setProperty('pointer-events', 'auto', 'important');
+      target.style.setProperty('visibility', 'visible', 'important');
+      target.style.setProperty('display', 'block', 'important');
+      target.style.setProperty('opacity', '1', 'important');
+      target.removeAttribute('aria-hidden');
+      if (!target.dataset.storylineBypassCloseForwarder) {
+        target.dataset.storylineBypassCloseForwarder = '1';
+        target.addEventListener('click', () => {
+          const rect = target.getBoundingClientRect();
+          const graphic = document.elementsFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2
+          ).find((element) => element !== target &&
+            !target.contains(element) &&
+            element.closest('.slide-object'));
+          graphic?.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+          }));
+        });
+      }
+      let parent = target.parentElement;
+      while (parent && parent !== document.body) {
+        parent.style.setProperty('pointer-events', 'auto', 'important');
+        parent = parent.parentElement;
+      }
+    }
+  };
+
+  const enableUserControls = () => {
+    document.querySelectorAll('.acc-shadow-el.acc-button').forEach((control) => {
+      control.style.setProperty('pointer-events', 'auto', 'important');
+    });
   };
 
   const autoPlayVideo = () => {
@@ -121,9 +205,7 @@
           (actions.some((action) => action.kind === 'show_slidelayer') && !activatesGate);
 
         const id = object.id || object.attributes?.id;
-        const domTarget = id && document.querySelector(
-          `[data-model-id="${CSS.escape(id)}"]`
-        );
+        const domTarget = objectTargets(id).find(visible);
         return Boolean(domTarget && activatesGate && !navigates);
       });
     });
@@ -135,9 +217,7 @@
 
     for (const object of gatedObjects(slide)) {
       const id = object.id || object.attributes?.id;
-      const target = id && document.querySelector(
-        `[data-model-id="${CSS.escape(id)}"]`
-      );
+      const target = objectTargets(id).find(visible) || objectTargets(id)[0];
       if (!target) continue;
       try {
         target.style.setProperty('pointer-events', 'auto', 'important');
@@ -161,6 +241,8 @@
 
   const tick = () => {
     if (!enabled) return;
+    enableUserControls();
+    enablePlayerClose();
     autoPlayVideo();
     const app = window.DS?.appState;
     if (!app) return;

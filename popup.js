@@ -20,7 +20,7 @@ const readEnabled = async (tabId) => {
 
 const writeEnabled = async (tabId, enabled) => {
   await chrome.scripting.executeScript({
-    target: { tabId },
+    target: { tabId, allFrames: true },
     func: ({ key, value }) => {
       localStorage.setItem(key, String(value));
       window.dispatchEvent(new CustomEvent('storyline-bypass-setting', {
