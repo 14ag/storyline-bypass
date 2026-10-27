@@ -18,20 +18,26 @@
   }).observe(document, { childList: true, subtree: true });
 
   // Runs in the page's MAIN world so Storyline's window.DS is reachable.
-  // The player's master clock multiplies elapsed time by playbackSpeed, and every
-  // slide timeline (plus its GSAP tweens and audio clips) derives from that clock,
-  // so 16x fires the reveal/onmediacomplete triggers in order instead of skipping them.
-  // ponytail: 16 is Chrome's playbackRate ceiling, so a slide still takes duration/16
-  // to finish; if that ever drags, seek each timeline to its duration instead.
+  // Seeking a slide timeline to its duration runs every timeline event in order and
+  // renders each tween at its end state, so a slide is complete on arrival instead of
+  // playing out. The speed keeps the audio clips (and their onmediacomplete triggers)
+  // finishing fast in the background.
+  // ponytail: 16 is Chrome's playbackRate ceiling, so narration still needs duration/16
+  // to fire its completion triggers; seek the audio elements too if that ever shows.
   const SPEED = 16;
 
-  const tune = () => {
+  const tick = () => {
     const app = window.DS?.appState;
     if (!app) return;
     if (app.getPlaybackSpeed() !== SPEED) app.setPlaybackSpeed(SPEED);
     if (app.getVolume() !== 0) app.setVolume(0);
+
+    const timeline = window.DS.windowManager?.getMainWindowSlide?.()?.currentTimeline?.();
+    if (timeline?.timeline && timeline.playbackState() === 'playing') {
+      timeline.seek(timeline.timelineDuration());
+    }
   };
 
-  tune();
-  setInterval(tune, 500);
+  tick();
+  setInterval(tick, 250);
 })();
