@@ -1,7 +1,7 @@
 ![Banner](./assets/banner.webp)
 
 
-making an extension for a site that skips all the animation delays which are gated behind the audio. normally this training before allowing one to proceed by revealing the "continue" button.
+this is an extension that skips all the animation delays which are gated behind the audio
 
 ### installation
 

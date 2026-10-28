@@ -1,6 +1,6 @@
 {
   "name": "Storyline-Bypass",
-  "version": "1.26.76840",
+  "version": "1.26.76870",
   "description": "Mutes Storyline audio and fast-forwards its slide timeline.",
   "main": "content.js",
   "scripts": {
