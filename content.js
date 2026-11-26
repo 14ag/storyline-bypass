@@ -34,7 +34,8 @@
   // to fire its completion triggers; seek the audio elements too if that ever shows.
   const SPEED = 16;
 
-  let processed = false;
+  let revealed = false;
+  let gatesDone = false;
   let lastSlideId = null;
 
   const revealHidden = () => {
@@ -130,23 +131,6 @@
       target.style.setProperty('display', 'block', 'important');
       target.style.setProperty('opacity', '1', 'important');
       target.removeAttribute('aria-hidden');
-      if (!target.dataset.storylineBypassCloseForwarder) {
-        target.dataset.storylineBypassCloseForwarder = '1';
-        target.addEventListener('click', () => {
-          const rect = target.getBoundingClientRect();
-          const graphic = document.elementsFromPoint(
-            rect.left + rect.width / 2,
-            rect.top + rect.height / 2
-          ).find((element) => element !== target &&
-            !target.contains(element) &&
-            element.closest('.slide-object'));
-          graphic?.dispatchEvent(new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-          }));
-        });
-      }
       let parent = target.parentElement;
       while (parent && parent !== document.body) {
         parent.style.setProperty('pointer-events', 'auto', 'important');
@@ -155,9 +139,103 @@
     }
   };
 
+  const satisfySlideVariables = () => {
+    const player = typeof window.GetPlayer === 'function' ? window.GetPlayer() : null;
+    if (!player) return;
+    const slide = window.DS?.windowManager?.getMainWindowSlide?.();
+    if (!slide) return;
+
+    const allEvents = [];
+    const collectEvents = (item) => {
+      if (!item) return;
+      if (item.attributes?.events) allEvents.push(...item.attributes.events);
+      const objs = models(item.attributes?.objects || item.objects);
+      objs.forEach(collectEvents);
+      const layers = models(item.attributes?.slideLayers || item.slideLayers);
+      layers.forEach(collectEvents);
+    };
+    collectEvents(slide);
+
+    const extractCompares = (node) => {
+      if (!node || typeof node !== 'object') return;
+      if (node.kind === 'compare') {
+        let varStr = null;
+        let targetVal = null;
+        if (node.typea === 'var' && typeof node.valuea === 'string') {
+          varStr = node.valuea;
+          targetVal = node.valueb;
+        } else if (node.typeb === 'var' && typeof node.valueb === 'string') {
+          varStr = node.valueb;
+          targetVal = node.valuea;
+        }
+        if (varStr && (node.operator === 'eq' || node.operator === 'gte' || node.operator === 'lte')) {
+          const clean = varStr.replace(/^_player\./, '').replace(/^#/, '');
+          if (!clean.startsWith('has') && !clean.includes('LastSlide') && !clean.includes('Session')) {
+            try {
+              player.SetVar(clean, targetVal);
+            } catch (e) {}
+          }
+        }
+      }
+      for (const k in node) {
+        if (Array.isArray(node[k])) {
+          node[k].forEach(extractCompares);
+        } else if (typeof node[k] === 'object') {
+          extractCompares(node[k]);
+        }
+      }
+    };
+    allEvents.forEach(extractCompares);
+  };
+
   const enableUserControls = () => {
+    const slide = window.DS?.windowManager?.getMainWindowSlide?.();
+    const objs = slide ? models(slide.attributes?.slideLayers).flatMap(l => models((l.attributes || l).objects)) : [];
+
+    // Enable accessibility shadow buttons and wire click to Storyline action execution
     document.querySelectorAll('.acc-shadow-el.acc-button').forEach((control) => {
       control.style.setProperty('pointer-events', 'auto', 'important');
+      control.style.setProperty('cursor', 'pointer', 'important');
+
+      if (!control.dataset.storylineBypassWired) {
+        control.dataset.storylineBypassWired = '1';
+        control.addEventListener('click', () => {
+          const id = control.id?.replace(/^acc-/, '') || control.dataset?.represents?.split('.').pop();
+          if (!id) return;
+          const targetObj = objs.find(o => (o.id || o.attributes?.id) === id);
+          if (targetObj?.executePlayerEvent) {
+            try {
+              targetObj.executePlayerEvent('onrelease');
+            } catch (e) {}
+          }
+        });
+      }
+    });
+
+    // Storyline's layout engine hides the entire bottom nav bar and positions
+    // #nav-controls off-screen (width:0, transform:translate(814px,0)) when the
+    // slide is configured to hide navigation buttons. Force everything visible.
+    const bottomBar = document.getElementById('bottom-bar');
+    if (bottomBar) {
+      bottomBar.style.setProperty('display', 'block', 'important');
+    }
+
+    const navControls = document.getElementById('nav-controls');
+    if (navControls) {
+      // Override the transform that pushes nav-controls off the right edge
+      navControls.style.setProperty('transform', 'translate(0px, 0px)', 'important');
+      navControls.style.setProperty('width', '120px', 'important');
+      navControls.style.setProperty('right', '0', 'important');
+      navControls.style.setProperty('position', 'absolute', 'important');
+    }
+
+    // The individual nav buttons also carry their own inline display:none
+    ['next', 'prev'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.style.setProperty('display', 'block', 'important');
+        btn.style.setProperty('pointer-events', 'auto', 'important');
+      }
     });
   };
 
@@ -189,10 +267,21 @@
         const events = object.attributes?.events || [];
         const release = events.find((event) => event.kind === 'onrelease');
         const actions = release?.actions || [];
+        // An object activates a gate if its onrelease actions do something that
+        // changes course state (variable, animation, visited-tracking, setstates).
+        // Pure hover-clear action groups (ActGrpClearHoverState) are decorative and
+        // are present on EVERY button — they must not count as a gate indicator.
+        const isSubstantiveActionGroup = (action) =>
+          action.kind === 'exe_actiongroup' &&
+          !/ClearHoverState/i.test(action.id || '') &&
+          !/HoverState/i.test(action.id || '');
+
         const activatesGate = actions.some((action) =>
           action.kind === 'exe_animation' ||
           action.kind === 'exe_javascript' ||
           action.kind === 'adjustvar' ||
+          action.kind === 'if_action' ||
+          isSubstantiveActionGroup(action) ||
           /visited/i.test(action.id || '')
         );
         const navigates = actions.some((action) => [
@@ -205,7 +294,9 @@
           (actions.some((action) => action.kind === 'show_slidelayer') && !activatesGate);
 
         const id = object.id || object.attributes?.id;
-        const domTarget = objectTargets(id).find(visible);
+        // Check both the visible DOM target and the fallback (after revealHidden,
+        // the element exists in DOM even if layout hasn't caught up yet)
+        const domTarget = objectTargets(id).find(visible) || objectTargets(id)[0];
         return Boolean(domTarget && activatesGate && !navigates);
       });
     });
@@ -221,6 +312,9 @@
       if (!target) continue;
       try {
         target.style.setProperty('pointer-events', 'auto', 'important');
+        target.style.setProperty('visibility', 'visible', 'important');
+        target.style.setProperty('display', 'block', 'important');
+        target.style.setProperty('opacity', '1', 'important');
         let parent = target.parentElement;
         while (parent && parent !== document.body) {
           parent.style.setProperty('pointer-events', 'auto', 'important');
@@ -257,15 +351,36 @@
     const slideId = window.DS.windowManager?.getMainWindowSlide?.()?.id;
     if (slideId && slideId !== lastSlideId) {
       lastSlideId = slideId;
-      processed = false;
+      revealed = false;
+      gatesDone = false;
     }
+
+    // Auto-satisfy any variable gates on the slide so Next button unlocks
+    satisfySlideVariables();
 
     // After timeline completes, reveal elements and activate only course gates.
     // Navigation controls remain user-controlled.
-    if (timeline.playbackState() === 'ended' && !processed) {
-      revealHidden();
-      processed = true;
-      clickGatedObjects();
+    if (timeline.playbackState() === 'ended') {
+      if (!revealed) {
+        revealHidden();
+        revealed = true;
+        // Defer gate-clicking until after the browser has flushed layout
+        // from the revealHidden() DOM changes. Without this, getBoundingClientRect()
+        // still returns zero-size rects and gatedObjects finds nothing visible.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          clickGatedObjects();
+        }));
+      } else if (!gatesDone) {
+        // Keep retrying on each tick until all gates are clicked.
+        // clickGatedObjects returns true only if DS slide was found;
+        // we consider gates done when no gated objects remain visible.
+        const slide = window.DS?.windowManager?.getMainWindowSlide?.();
+        if (slide && gatedObjects(slide).length === 0) {
+          gatesDone = true;
+        } else {
+          clickGatedObjects();
+        }
+      }
     }
   };
 
