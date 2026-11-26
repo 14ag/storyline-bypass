@@ -1,3 +1,5 @@
+![Banner](https://raw.githubusercontent.com/14ag/storyline-bypass/banner/banner.webp)
+
 ![Banner](./assets/banner.webp)
 
 
